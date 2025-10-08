@@ -146,6 +146,48 @@ bool TradeDayOfWeek()
 
 
 //+------------------------------------------------------------------+
+//| CloseOldTrades - Centralized Trade Duration Management          |
+//| Automatically closes positions exceeding 24-hour duration        |
+//| Works for all strategies using MagicNumber identification        |
+//+------------------------------------------------------------------+
+void CloseOldTrades()
+  {
+   const int MAX_TRADE_DURATION_SECONDS = 86400;  // 24 hours in seconds
+
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket <= 0)
+         continue;
+
+      // Check if position belongs to current symbol and magic number
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol)
+         continue;
+      if(PositionGetInteger(POSITION_MAGIC) != MagicNumber)
+         continue;
+
+      // Check trade duration
+      datetime openTime = (datetime)PositionGetInteger(POSITION_TIME);
+      datetime currentTime = TimeCurrent();
+      int tradeDuration = (int)(currentTime - openTime);
+
+      // Close if exceeds 24 hours
+      if(tradeDuration >= MAX_TRADE_DURATION_SECONDS)
+        {
+         if(trade.PositionClose(ticket))
+           {
+            Print("Position #", ticket, " closed by Money Protector - Max duration exceeded (24 hours)");
+           }
+         else
+           {
+            Print("Failed to close position #", ticket, " - Error: ", GetLastError());
+           }
+        }
+     }
+  }
+
+
+//+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 void myAlert(string type, string message)
