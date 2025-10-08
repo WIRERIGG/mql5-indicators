@@ -9,9 +9,7 @@ const string MIDPOINT_LINE = "MidpointLine";
 double rangeHigh, rangeLow;
 datetime rangeStartTime, rangeEndTime;
 
-// EMA Handles for M15 and H1
-int ema5_handle, ema8_handle, ema13_handle;
-int ema5_H1_handle, ema8_H1_handle, ema13_H1_handle;
+
 
 // Function to draw trading range
 int drawRange(datetime time1, double price1, datetime time2, double price2) {
