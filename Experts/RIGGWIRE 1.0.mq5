@@ -246,6 +246,22 @@ void OnTick() {
    // Check daily profit and other conditions
    checkDailyProfit();
 
+   // ===================================================================
+   // VISUAL INDICATORS - Update every tick (BEFORE early returns)
+   // ===================================================================
+
+   // Draw supply and demand zones
+   DrawSupplyDemandZones(PERIOD_H1);
+   DrawSupplyDemandZones(PERIOD_H4);
+
+   // Draw trading range with trend detection
+   FindRange(_Symbol, PERIOD_H1, 0, 20);  // Find H1 range over last 20 bars
+   drawRange(rangeStartTime, rangeHigh, rangeEndTime, rangeLow);
+
+   // ===================================================================
+   // TRADING LOGIC - Execute only when conditions allow
+   // ===================================================================
+
    // Exit early if trading is not allowed
    if (!isTradeAllowed) return;
 
@@ -264,14 +280,6 @@ void OnTick() {
    // Apply trailing stops for buy and sell positions
    TrailingStopTrail(ORDER_TYPE_BUY, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint);
    TrailingStopTrail(ORDER_TYPE_SELL, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint);
-
-   // Draw supply and demand zones
-   DrawSupplyDemandZones(PERIOD_H1);
-   DrawSupplyDemandZones(PERIOD_H4);
-
-   // Draw trading range with trend detection
-   FindRange(_Symbol, PERIOD_H1, 0, 20);  // Find H1 range over last 20 bars
-   drawRange(rangeStartTime, rangeHigh, rangeEndTime, rangeLow);
 
    // Check trade entry conditions for H1 timeframe
    CheckTradeEntryConditions(PERIOD_H1);
