@@ -1,6 +1,3 @@
-#ifndef DRAWRANGE_MQH
-#define DRAWRANGE_MQH
-
 #include <ChartObjects\ChartObjectsLines.mqh>
 #include "TrendConfirmation.mqh"
 
@@ -13,10 +10,8 @@ double rangeHigh, rangeLow;
 datetime rangeStartTime, rangeEndTime;
 
 // EMA Handles for M15 and H1
-// These are expected to be declared in the parent EA file
-// Global references - no need for 'extern' in MQL5
-// ema5_handle, ema8_handle, ema13_handle declared in parent
-// ema5_H1_handle, ema8_H1_handle, ema13_H1_handle declared in parent
+int ema5_handle, ema8_handle, ema13_handle;
+int ema5_H1_handle, ema8_H1_handle, ema13_H1_handle;
 
 // Function to draw trading range
 int drawRange(datetime time1, double price1, datetime time2, double price2) {
@@ -68,8 +63,6 @@ int drawRange(datetime time1, double price1, datetime time2, double price2) {
 }
 
 // EMA-based trend detection
-#ifndef TREND_DETECTION_DEFINED
-#define TREND_DETECTION_DEFINED
 int TrendDetection() {
    double ema5_M15[1], ema8_M15[1], ema13_M15[1];
    double ema5_H1[1], ema8_H1[1], ema13_H1[1];
@@ -101,7 +94,6 @@ int TrendDetection() {
    // Combine signals
    return (trendSignal_M15 == trendSignal_H1) ? trendSignal_M15 : 0;
 }
-#endif // TREND_DETECTION_DEFINED
 
 // Find range data
 void FindRange(string symbol, ENUM_TIMEFRAMES timeframe, int startPeriod, int endPeriod) {
@@ -128,5 +120,3 @@ int NormalizeSignal(int sum) {
 int Sign(double value) {
    return (value > 0) - (value < 0);
 }
-
-#endif // DRAWRANGE_MQH
