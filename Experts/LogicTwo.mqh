@@ -1,11 +1,17 @@
+//+------------------------------------------------------------------+
+//|                                                     LogicTwo.mqh |
+//|                         RIGGWIRE Trading System - Logic Module 2 |
+//|                                      Copyright 2020, CompanyName |
+//|                                       http://www.companyname.net |
+//+------------------------------------------------------------------+
 
-#include   "Money Protector.mqh"
-#include   "TrendConfirmation.mqh"
+#include "Money Protector.mqh"
+#include "TrendConfirmation.mqh"
 
 //+------------------------------------------------------------------+
-//| Standalone Compilation Support for LogicTwo                       |
-//| Declare Logic-specific variables when compiled standalone          |
-//| NOTE: ATR variables provided by TrendConfirmation.mqh             |
+//| Standalone Compilation Support for LogicTwo                     |
+//| Declare Logic-specific variables when compiled standalone        |
+//| NOTE: ATR variables provided by TrendConfirmation.mqh           |
 //+------------------------------------------------------------------+
 #ifndef PARENT_DECLARED
    // Logic-specific trading parameters
@@ -15,159 +21,162 @@
    double BREAKEVEN = 30.0;
 
    // Next trade timing variables
-   int NextOpenTradeAfterMinutes = 15;
    int NextOpenTradeAfterTOD_Hour = 0;
    int NextOpenTradeAfterTOD_Min = 15;
 
    // ATR variables are provided by TrendConfirmation.mqh (included above)
 #endif
 
+//+------------------------------------------------------------------+
+//| CheckConditionForLogicTwo - Additional Signal Filter            |
+//| TODO: Implement custom logic-specific entry conditions          |
+//+------------------------------------------------------------------+
+bool CheckConditionForLogicTwo()
+{
+   // TODO: Add custom signal validation logic here
+   // Return true when LogicTwo-specific conditions are met
+   return false;
+}
 
-
-
-
-
-
-
-
-
-bool CheckConditionForLogicTwo() { /* Implement logic */ return false; }
-
-
-
-
-
+//+------------------------------------------------------------------+
+//| LogicTwo - Alternative Trading Logic Module                     |
+//| Executes trades based on TrendConfirmation signals with         |
+//| alternative strategy parameters and risk management             |
+//+------------------------------------------------------------------+
 void LogicTwo()
 {
+   // ===================================================================
+   // STEP 1: Update Technical Analysis Signals
+   // ===================================================================
+   TrendConfirmation();
 
-
-  ulong ticket = 0;
+   // ===================================================================
+   // STEP 2: Initialize Trade Variables
+   // ===================================================================
+   ulong ticket = 0;
    double price;
    double TradeSize;
    double SL;
-   datetime currentTime = TimeCurrent(); // Get the current time
+   datetime currentTime = TimeCurrent();
 
+   // ===================================================================
+   // STEP 3: Apply Trailing Stop Management
+   // ===================================================================
+   TrailingStopTrail(ORDER_TYPE_BUY, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint);
+   TrailingStopTrail(ORDER_TYPE_SELL, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint);
 
-   TrailingStopTrail(ORDER_TYPE_BUY, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint); //Trailing Stop = trail
-   TrailingStopTrail(ORDER_TYPE_SELL, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint); //Trailing Stop = trail
-
-
-
-
-//Open Buy Order
-
-
-   
-   
-   
-   
-
-  {
-     
+   // ===================================================================
+   // STEP 4: Process BULLISH Signal (BUY Trade)
+   // ===================================================================
+   if(g_lastSignalState.bullish)
+   {
       MqlTick last_tick;
       SymbolInfoTick(Symbol(), last_tick);
       price = last_tick.ask;
-      SL = SL_Points * myPoint; //Stop Loss = value in points (relative to price)
+      SL = SL_Points * myPoint;
       TradeSize = MM_Size(SL);
-      if(TradesCount(ORDER_TYPE_BUY) + TradesCount(ORDER_TYPE_SELL) > 0 || TimeCurrent() - LastCloseTime() < NextOpenTradeAfterMinutes * 60)
-         return; //next open trade after time after previous trade's close
+
+      // --- Safety Filters ---
+      // No existing positions allowed
+      if(TradesCount(ORDER_TYPE_BUY) + TradesCount(ORDER_TYPE_SELL) > 0)
+         return;
+
+      // Next trade time of day filter
       if(TimeCurrent() <= NextTradeTime)
-         return; //next open trade after time of the day
+         return;
+
+      // Trading hours filter
       if(!inTimeInterval(TimeCurrent(), TOD_From_Hour, TOD_From_Min, TOD_To_Hour, TOD_To_Min))
-         return; //open trades only at specific times of the day
+         return;
+
+      // Trading day of week filter
       if(!TradeDayOfWeek())
-         return; //open trades only on specific days of the week
+         return;
+
+      // --- Execute Trade ---
       if(TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED))
-        {
+      {
          ticket = myOrderSend(ORDER_TYPE_BUY, price, TradeSize, "");
          if(ticket == 0)
             return;
-        }
-      else //not autotrading => only send alert
-         myAlert("order", "");
-      // Convert hour and minute to a datetime value for today
-      string timeStr = IntegerToString(NextOpenTradeAfterTOD_Hour, 2) + ":" + IntegerToString(NextOpenTradeAfterTOD_Min, 2);
+      }
+      else
+      {
+         myAlert("order", ""); // Auto-trading disabled, send alert only
+      }
+
+      // --- Update Next Trade Time ---
+      string timeStr = IntegerToString(NextOpenTradeAfterTOD_Hour, 2) + ":" +
+                       IntegerToString(NextOpenTradeAfterTOD_Min, 2);
       NextTradeTime = StringToTime(timeStr);
 
-      // Check if the calculated NextTradeTime is in the past, and if so, adjust it
-      if(NextTradeTime <= TimeCurrent())
-        {
-         // Use 'datetime' or 'long' for calculations involving datetime values
-         datetime differenceInSeconds = TimeCurrent() - NextTradeTime + NextOpenTradeAfterMinutes;
-         datetime periodsToAdd = differenceInSeconds / (NextOpenTradeAfterMinutes * 60) + 1;
-         NextTradeTime += periodsToAdd * NextOpenTradeAfterMinutes * 60; // Adjust NextTradeTime to the future
-        }
+      // Advance to next trading period
+      datetime differenceInSeconds = TimeCurrent() - NextTradeTime;
+      if(differenceInSeconds > 0)
+      {
+         datetime periodsToAdd = (differenceInSeconds / (NextOpenTradeAfterTOD_Min * 60)) + 1;
+         NextTradeTime += periodsToAdd * NextOpenTradeAfterTOD_Min * 60;
+      }
 
-
+      // --- Apply Stop Loss ---
       myOrderModifyRel(ORDER_TYPE_BUY, ticket, SL, 0);
-     }
- 
- 
- 
- //Open Sell Order
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
-     
-     
+   }
 
-
+   // ===================================================================
+   // STEP 5: Process BEARISH Signal (SELL Trade)
+   // ===================================================================
+   if(g_lastSignalState.bearish)
    {
       MqlTick last_tick;
       SymbolInfoTick(Symbol(), last_tick);
       price = last_tick.bid;
-      SL = SL_Points * myPoint; //Stop Loss = value in points (relative to price)
+      SL = SL_Points * myPoint;
       TradeSize = MM_Size(SL);
-      if(TradesCount(ORDER_TYPE_BUY) + TradesCount(ORDER_TYPE_SELL) > 0 || TimeCurrent() - LastCloseTime() < NextOpenTradeAfterMinutes * 60)
-         return; //next open trade after time after previous trade's close
+
+      // --- Safety Filters ---
+      // No existing positions allowed
+      if(TradesCount(ORDER_TYPE_BUY) + TradesCount(ORDER_TYPE_SELL) > 0)
+         return;
+
+      // Next trade time of day filter
       if(TimeCurrent() <= NextTradeTime)
-         return; //next open trade after time of the day
+         return;
+
+      // Trading hours filter
       if(!inTimeInterval(TimeCurrent(), TOD_From_Hour, TOD_From_Min, TOD_To_Hour, TOD_To_Min))
-         return; //open trades only at specific times of the day
+         return;
+
+      // Trading day of week filter
       if(!TradeDayOfWeek())
-         return; //open trades only on specific days of the week
+         return;
+
+      // --- Execute Trade ---
       if(TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED))
-        {
+      {
          ticket = myOrderSend(ORDER_TYPE_SELL, price, TradeSize, "");
          if(ticket == 0)
             return;
-        }
-      else //not autotrading => only send alert
-         myAlert("order", "");
+      }
+      else
+      {
+         myAlert("order", ""); // Auto-trading disabled, send alert only
+      }
 
-
-      // Convert hour and minute to a datetime value for today
-      // Convert hour and minute to a datetime value for today
-      string timeStr = IntegerToString(NextOpenTradeAfterTOD_Hour, 2) + ":" + IntegerToString(NextOpenTradeAfterTOD_Min, 2);
+      // --- Update Next Trade Time ---
+      string timeStr = IntegerToString(NextOpenTradeAfterTOD_Hour, 2) + ":" +
+                       IntegerToString(NextOpenTradeAfterTOD_Min, 2);
       NextTradeTime = StringToTime(timeStr);
 
-      // Check if the calculated NextTradeTime is in the past, and if so, adjust it
-      if(NextTradeTime <= TimeCurrent())
-        {
-         // Use 'datetime' or 'long' for calculations involving datetime values
-         datetime differenceInSeconds = TimeCurrent() - NextTradeTime + NextOpenTradeAfterMinutes;
-         datetime periodsToAdd = differenceInSeconds / (NextOpenTradeAfterMinutes * 60) + 1;
-         NextTradeTime += periodsToAdd * NextOpenTradeAfterMinutes * 60; // Adjust NextTradeTime to the future
-        }
+      // Advance to next trading period
+      datetime differenceInSeconds = TimeCurrent() - NextTradeTime;
+      if(differenceInSeconds > 0)
+      {
+         datetime periodsToAdd = (differenceInSeconds / (NextOpenTradeAfterTOD_Min * 60)) + 1;
+         NextTradeTime += periodsToAdd * NextOpenTradeAfterTOD_Min * 60;
+      }
 
-
-      // Now NextTradeTime is guaranteed to be in the future relative to TimeCurrent()
-
-
+      // --- Apply Stop Loss ---
       myOrderModifyRel(ORDER_TYPE_SELL, ticket, SL, 0);
-     }
-
-
-
-
-
-
+   }
 }
+//+------------------------------------------------------------------+
