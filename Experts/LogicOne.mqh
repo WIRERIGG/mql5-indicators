@@ -55,20 +55,13 @@ void CloseOldTrades()
       // Close if exceeds 1 day
       if(tradeDuration >= MAX_TRADE_DURATION_SECONDS)
       {
-         ENUM_POSITION_TYPE posType = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
-         double volume = PositionGetDouble(POSITION_VOLUME);
-
-         if(posType == POSITION_TYPE_BUY)
+         if(trade.PositionClose(ticket))
          {
-            MqlTick tick;
-            SymbolInfoTick(_Symbol, tick);
-            myOrderClose(ORDER_TYPE_BUY, ticket, volume, tick.bid, "Max duration exceeded (24h)");
+            Print("Position #", ticket, " closed - Max duration exceeded (24 hours)");
          }
-         else if(posType == POSITION_TYPE_SELL)
+         else
          {
-            MqlTick tick;
-            SymbolInfoTick(_Symbol, tick);
-            myOrderClose(ORDER_TYPE_SELL, ticket, volume, tick.ask, "Max duration exceeded (24h)");
+            Print("Failed to close position #", ticket, " - Error: ", GetLastError());
          }
       }
    }
