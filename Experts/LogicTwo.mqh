@@ -33,6 +33,53 @@
 #endif
 
 //+------------------------------------------------------------------+
+//| CloseOldTrades - Close trades older than 1 day                  |
+//| Risk Management: No trade should exceed 24 hours                |
+//+------------------------------------------------------------------+
+void CloseOldTrades()
+{
+   const int MAX_TRADE_DURATION_SECONDS = 86400;  // 24 hours in seconds
+
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket <= 0)
+         continue;
+
+      // Check if position belongs to current symbol and magic number
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol)
+         continue;
+      if(PositionGetInteger(POSITION_MAGIC) != MagicNumber)
+         continue;
+
+      // Check trade duration
+      datetime openTime = (datetime)PositionGetInteger(POSITION_TIME);
+      datetime currentTime = TimeCurrent();
+      int tradeDuration = (int)(currentTime - openTime);
+
+      // Close if exceeds 1 day
+      if(tradeDuration >= MAX_TRADE_DURATION_SECONDS)
+      {
+         ENUM_POSITION_TYPE posType = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
+         double volume = PositionGetDouble(POSITION_VOLUME);
+
+         if(posType == POSITION_TYPE_BUY)
+         {
+            MqlTick tick;
+            SymbolInfoTick(_Symbol, tick);
+            myOrderClose(ORDER_TYPE_BUY, ticket, volume, tick.bid, "Max duration exceeded (24h)");
+         }
+         else if(posType == POSITION_TYPE_SELL)
+         {
+            MqlTick tick;
+            SymbolInfoTick(_Symbol, tick);
+            myOrderClose(ORDER_TYPE_SELL, ticket, volume, tick.ask, "Max duration exceeded (24h)");
+         }
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
 //| CheckHighVolatility - ATR-Based Volatility Filter               |
 //| Only trade when market volatility is sufficient for scalping    |
 //+------------------------------------------------------------------+
@@ -72,7 +119,12 @@ void LogicTwo()
    TrendConfirmation();
 
    // ===================================================================
-   // STEP 2: Initialize Trade Variables
+   // STEP 2: Close Trades Exceeding 1 Day Duration
+   // ===================================================================
+   CloseOldTrades();
+
+   // ===================================================================
+   // STEP 3: Initialize Trade Variables
    // ===================================================================
    ulong ticket = 0;
    double price;
@@ -81,13 +133,13 @@ void LogicTwo()
    datetime currentTime = TimeCurrent();
 
    // ===================================================================
-   // STEP 3: Apply Trailing Stop Management (Aggressive)
+   // STEP 4: Apply Trailing Stop Management (Aggressive)
    // ===================================================================
    TrailingStopTrail(ORDER_TYPE_BUY, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint);
    TrailingStopTrail(ORDER_TYPE_SELL, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint);
 
    // ===================================================================
-   // STEP 4: Process BULLISH Signal (SCALPING BUY)
+   // STEP 5: Process BULLISH Signal (SCALPING BUY)
    // ===================================================================
    if(g_lastSignalState.bullish)
    {
@@ -148,7 +200,7 @@ void LogicTwo()
    }
 
    // ===================================================================
-   // STEP 5: Process BEARISH Signal (SCALPING SELL)
+   // STEP 6: Process BEARISH Signal (SCALPING SELL)
    // ===================================================================
    if(g_lastSignalState.bearish)
    {
