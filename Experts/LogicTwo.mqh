@@ -1,8 +1,14 @@
 //+------------------------------------------------------------------+
 //|                                                     LogicTwo.mqh |
-//|                         RIGGWIRE Trading System - Logic Module 2 |
+//|                  RIGGWIRE Trading System - Aggressive Scalping   |
 //|                                      Copyright 2020, CompanyName |
 //|                                       http://www.companyname.net |
+//+------------------------------------------------------------------+
+//| Strategy: High-Frequency Scalping with Tight Risk Management    |
+//| - Tighter stops for quick exits                                 |
+//| - Faster trailing stops to lock profits quickly                 |
+//| - High volatility filter (ATR-based)                            |
+//| - Simplified entry logic for speed                              |
 //+------------------------------------------------------------------+
 
 #include "Money Protector.mqh"
@@ -10,38 +16,53 @@
 
 //+------------------------------------------------------------------+
 //| Standalone Compilation Support for LogicTwo                     |
-//| Declare Logic-specific variables when compiled standalone        |
-//| NOTE: ATR variables provided by TrendConfirmation.mqh           |
+//| SCALPING PARAMETERS: Aggressive, tight risk management          |
 //+------------------------------------------------------------------+
 #ifndef PARENT_DECLARED
-   // Logic-specific trading parameters
-   int SL_Points = 20;
-   double TRAILING_SL = 50.0;
-   double STEPS = 10.0;
-   double BREAKEVEN = 30.0;
+   // Logic-specific trading parameters - SCALPING CONFIGURATION
+   int SL_Points = 10;              // Tight stop loss for scalping
+   double TRAILING_SL = 30.0;       // Fast trailing stop
+   double STEPS = 5.0;              // Smaller step size
+   double BREAKEVEN = 15.0;         // Quick breakeven activation
 
    // Next trade timing variables
    int NextOpenTradeAfterTOD_Hour = 0;
-   int NextOpenTradeAfterTOD_Min = 15;
+   int NextOpenTradeAfterTOD_Min = 5;  // Faster re-entry (5 min instead of 15)
 
    // ATR variables are provided by TrendConfirmation.mqh (included above)
 #endif
 
 //+------------------------------------------------------------------+
-//| CheckConditionForLogicTwo - Additional Signal Filter            |
-//| TODO: Implement custom logic-specific entry conditions          |
+//| CheckHighVolatility - ATR-Based Volatility Filter               |
+//| Only trade when market volatility is sufficient for scalping    |
 //+------------------------------------------------------------------+
-bool CheckConditionForLogicTwo()
+bool CheckHighVolatility()
 {
-   // TODO: Add custom signal validation logic here
-   // Return true when LogicTwo-specific conditions are met
-   return false;
+   // Get ATR value to measure volatility
+   double atrArray[];
+   ArraySetAsSeries(atrArray, true);
+
+   int atrHandle = iATR(_Symbol, PERIOD_M5, ATRPeriod1);
+   if(atrHandle == INVALID_HANDLE)
+      return false;
+
+   if(CopyBuffer(atrHandle, 0, 0, 1, atrArray) <= 0)
+   {
+      IndicatorRelease(atrHandle);
+      return false;
+   }
+
+   double currentATR = atrArray[0];
+   IndicatorRelease(atrHandle);
+
+   // Require ATR above average (volatility filter)
+   // Higher volatility = better for scalping
+   return (currentATR > ATRMultiplier1 * myPoint);
 }
 
 //+------------------------------------------------------------------+
-//| LogicTwo - Alternative Trading Logic Module                     |
-//| Executes trades based on TrendConfirmation signals with         |
-//| alternative strategy parameters and risk management             |
+//| LogicTwo - Aggressive Scalping Strategy                         |
+//| Fast entries with tight risk management and quick profit taking |
 //+------------------------------------------------------------------+
 void LogicTwo()
 {
@@ -60,23 +81,27 @@ void LogicTwo()
    datetime currentTime = TimeCurrent();
 
    // ===================================================================
-   // STEP 3: Apply Trailing Stop Management
+   // STEP 3: Apply Trailing Stop Management (Aggressive)
    // ===================================================================
    TrailingStopTrail(ORDER_TYPE_BUY, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint);
    TrailingStopTrail(ORDER_TYPE_SELL, TRAILING_SL * myPoint, STEPS * myPoint, true, BREAKEVEN * myPoint);
 
    // ===================================================================
-   // STEP 4: Process BULLISH Signal (BUY Trade)
+   // STEP 4: Process BULLISH Signal (SCALPING BUY)
    // ===================================================================
    if(g_lastSignalState.bullish)
    {
+      // --- Volatility Filter for Scalping ---
+      if(!CheckHighVolatility())
+         return;  // Skip trade if volatility too low
+
       MqlTick last_tick;
       SymbolInfoTick(Symbol(), last_tick);
       price = last_tick.ask;
-      SL = SL_Points * myPoint;
+      SL = SL_Points * myPoint;  // Tight 10-point stop
       TradeSize = MM_Size(SL);
 
-      // --- Safety Filters ---
+      // --- Safety Filters (Simplified for Speed) ---
       // No existing positions allowed
       if(TradesCount(ORDER_TYPE_BUY) + TradesCount(ORDER_TYPE_SELL) > 0)
          return;
@@ -105,7 +130,7 @@ void LogicTwo()
          myAlert("order", ""); // Auto-trading disabled, send alert only
       }
 
-      // --- Update Next Trade Time ---
+      // --- Update Next Trade Time (5-minute intervals for scalping) ---
       string timeStr = IntegerToString(NextOpenTradeAfterTOD_Hour, 2) + ":" +
                        IntegerToString(NextOpenTradeAfterTOD_Min, 2);
       NextTradeTime = StringToTime(timeStr);
@@ -118,22 +143,26 @@ void LogicTwo()
          NextTradeTime += periodsToAdd * NextOpenTradeAfterTOD_Min * 60;
       }
 
-      // --- Apply Stop Loss ---
+      // --- Apply Tight Stop Loss ---
       myOrderModifyRel(ORDER_TYPE_BUY, ticket, SL, 0);
    }
 
    // ===================================================================
-   // STEP 5: Process BEARISH Signal (SELL Trade)
+   // STEP 5: Process BEARISH Signal (SCALPING SELL)
    // ===================================================================
    if(g_lastSignalState.bearish)
    {
+      // --- Volatility Filter for Scalping ---
+      if(!CheckHighVolatility())
+         return;  // Skip trade if volatility too low
+
       MqlTick last_tick;
       SymbolInfoTick(Symbol(), last_tick);
       price = last_tick.bid;
-      SL = SL_Points * myPoint;
+      SL = SL_Points * myPoint;  // Tight 10-point stop
       TradeSize = MM_Size(SL);
 
-      // --- Safety Filters ---
+      // --- Safety Filters (Simplified for Speed) ---
       // No existing positions allowed
       if(TradesCount(ORDER_TYPE_BUY) + TradesCount(ORDER_TYPE_SELL) > 0)
          return;
@@ -162,7 +191,7 @@ void LogicTwo()
          myAlert("order", ""); // Auto-trading disabled, send alert only
       }
 
-      // --- Update Next Trade Time ---
+      // --- Update Next Trade Time (5-minute intervals for scalping) ---
       string timeStr = IntegerToString(NextOpenTradeAfterTOD_Hour, 2) + ":" +
                        IntegerToString(NextOpenTradeAfterTOD_Min, 2);
       NextTradeTime = StringToTime(timeStr);
@@ -175,7 +204,7 @@ void LogicTwo()
          NextTradeTime += periodsToAdd * NextOpenTradeAfterTOD_Min * 60;
       }
 
-      // --- Apply Stop Loss ---
+      // --- Apply Tight Stop Loss ---
       myOrderModifyRel(ORDER_TYPE_SELL, ticket, SL, 0);
    }
 }
