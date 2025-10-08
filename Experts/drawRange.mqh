@@ -14,12 +14,9 @@ datetime rangeStartTime, rangeEndTime;
 
 // EMA Handles for M15 and H1
 // These are expected to be declared in the parent EA file
-extern int ema5_handle;
-extern int ema8_handle;
-extern int ema13_handle;
-extern int ema5_H1_handle;
-extern int ema8_H1_handle;
-extern int ema13_H1_handle;
+// Global references - no need for 'extern' in MQL5
+// ema5_handle, ema8_handle, ema13_handle declared in parent
+// ema5_H1_handle, ema8_H1_handle, ema13_H1_handle declared in parent
 
 // Function to draw trading range
 int drawRange(datetime time1, double price1, datetime time2, double price2) {

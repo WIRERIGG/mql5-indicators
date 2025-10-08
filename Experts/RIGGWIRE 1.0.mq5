@@ -269,6 +269,10 @@ void OnTick() {
    DrawSupplyDemandZones(PERIOD_H1);
    DrawSupplyDemandZones(PERIOD_H4);
 
+   // Draw trading range with trend detection
+   FindRange(_Symbol, PERIOD_H1, 0, 20);  // Find H1 range over last 20 bars
+   drawRange(rangeStartTime, rangeHigh, rangeEndTime, rangeLow);
+
    // Check trade entry conditions for H1 timeframe
    CheckTradeEntryConditions(PERIOD_H1);
 
