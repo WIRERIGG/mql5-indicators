@@ -10,6 +10,8 @@
 //| - Strong trend confirmation (no contrarian entries)             |
 //| - Higher timeframe alignment required                           |
 //+------------------------------------------------------------------+
+#ifndef LOGIC_THREE_MQH
+#define LOGIC_THREE_MQH
 
 #include "Money Protector.mqh"
 #include "TrendConfirmation.mqh"
@@ -272,4 +274,6 @@ void LogicThree()
       myOrderModifyRel(ORDER_TYPE_SELL, ticket, SL, 0);
    }
 }
+
+#endif // LOGIC_THREE_MQH
 //+------------------------------------------------------------------+

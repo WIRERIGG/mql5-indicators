@@ -4,6 +4,8 @@
 //|                                      Copyright 2020, CompanyName |
 //|                                       http://www.companyname.net |
 //+------------------------------------------------------------------+
+#ifndef LOGIC_ONE_MQH
+#define LOGIC_ONE_MQH
 
 #include "Money Protector.mqh"
 #include "TrendConfirmation.mqh"
@@ -173,4 +175,6 @@ void LogicOne()
       myOrderModifyRel(ORDER_TYPE_SELL, ticket, SL, 0);
    }
 }
+
+#endif // LOGIC_ONE_MQH
 //+------------------------------------------------------------------+

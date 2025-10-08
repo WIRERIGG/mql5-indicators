@@ -1,3 +1,6 @@
+#ifndef DRAW_RANGE_MQH
+#define DRAW_RANGE_MQH
+
 #include <ChartObjects\ChartObjectsLines.mqh>
 
 // Constants for object names
@@ -119,3 +122,5 @@ int NormalizeSignal(int sum) {
 int Sign(double value) {
    return (value > 0) - (value < 0);
 }
+
+#endif // DRAW_RANGE_MQH

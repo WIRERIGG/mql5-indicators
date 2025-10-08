@@ -1,3 +1,6 @@
+#ifndef DRAW_SUPPLY_DEMAND_ZONES_MQH
+#define DRAW_SUPPLY_DEMAND_ZONES_MQH
+
 // Global Variables to store latest zones
 double h4SupplyTop, h4SupplyBottom, h4DemandTop, h4DemandBottom;
 double d1SupplyTop, d1SupplyBottom, d1DemandTop, d1DemandBottom;
@@ -69,3 +72,5 @@ void DrawZone(string name, double top, double bottom, color zoneColor, datetime 
 
    ChartRedraw();
 }
+
+#endif // DRAW_SUPPLY_DEMAND_ZONES_MQH

@@ -10,6 +10,8 @@
 //| - High volatility filter (ATR-based)                            |
 //| - Simplified entry logic for speed                              |
 //+------------------------------------------------------------------+
+#ifndef LOGIC_TWO_MQH
+#define LOGIC_TWO_MQH
 
 #include "Money Protector.mqh"
 #include "TrendConfirmation.mqh"
@@ -213,4 +215,6 @@ void LogicTwo()
       myOrderModifyRel(ORDER_TYPE_SELL, ticket, SL, 0);
    }
 }
+
+#endif // LOGIC_TWO_MQH
 //+------------------------------------------------------------------+
