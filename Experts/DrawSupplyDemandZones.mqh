@@ -4,9 +4,9 @@ double d1SupplyTop, d1SupplyBottom, d1DemandTop, d1DemandBottom;
 
 // Function to draw supply and demand zones
 void DrawSupplyDemandZones(ENUM_TIMEFRAMES timeframe) {
-   int barsBack = 20; // Number of bars to analyze (increased for better visibility)
-   datetime startTime = iTime(_Symbol, timeframe, barsBack);  // Use actual bar time
-   datetime endTime = iTime(_Symbol, timeframe, 0) + PeriodSeconds(timeframe) * 5;  // Extend into future
+   int barsBack = 10; // Number of bars to analyze
+   datetime startTime = TimeCurrent() - PeriodSeconds(timeframe) * barsBack;
+   datetime endTime = TimeCurrent();
 
    double highestHigh = iHigh(_Symbol, timeframe, iHighest(_Symbol, timeframe, MODE_HIGH, barsBack, 0));
    double lowestLow = iLow(_Symbol, timeframe, iLowest(_Symbol, timeframe, MODE_LOW, barsBack, 0));
